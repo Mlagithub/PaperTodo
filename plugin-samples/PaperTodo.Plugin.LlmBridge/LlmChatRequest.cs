@@ -255,6 +255,8 @@ internal static class LlmPromptBuilder
 internal static class LlmAnswerFormatter
 {
     private const int MaximumTitleCharacters = 24;
+    /// <summary>Soft cap for the question text recorded inside the answer note.</summary>
+    internal const int MaximumRecordedQuestionCharacters = 4000;
 
     /// <summary>Appended to an existing linked note: one Q/A section separated by a rule.</summary>
     internal static string FormatAnswerAppend(
@@ -300,6 +302,48 @@ internal static class LlmAnswerFormatter
         builder.AppendLine();
         builder.Append(answer.Trim());
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// The question text recorded in the answer note for a paper-level send: what was actually
+    /// asked (the todo list or the note body), not just the paper title. Long content is capped.
+    /// </summary>
+    internal static string BuildPaperQuestion(
+        string paperTitle,
+        string paperType,
+        IReadOnlyList<string> todoLines,
+        string? noteBody,
+        bool noteBodyAvailable,
+        bool chinese)
+    {
+        string question;
+        if (string.Equals(paperType, "todo", StringComparison.OrdinalIgnoreCase))
+        {
+            question = string.Join("\n", todoLines);
+            if (string.IsNullOrWhiteSpace(question))
+            {
+                question = LlmBridgeText.For(chinese ? "zh" : null, "（清单为空）", "(empty list)");
+            }
+        }
+        else if (string.Equals(paperType, "note", StringComparison.OrdinalIgnoreCase))
+        {
+            question = noteBodyAvailable && !string.IsNullOrWhiteSpace(noteBody)
+                ? noteBody
+                : LlmBridgeText.For(chinese ? "zh" : null, "（无正文）", "(no body)");
+        }
+        else
+        {
+            question = LlmBridgeText.For(chinese ? "zh" : null, "（该纸片类型没有可导出的正文）", "(no exportable body)");
+        }
+
+        question = question.Trim();
+        if (question.Length > MaximumRecordedQuestionCharacters)
+        {
+            question = question[..MaximumRecordedQuestionCharacters].TrimEnd() +
+                       "\n…[" + LlmBridgeText.For(chinese ? "zh" : null, "问题内容过长已截断", "question truncated") + "]";
+        }
+
+        return question;
     }
 
     /// <summary>Title for a newly created answer note, derived from the todo text or paper title.</summary>

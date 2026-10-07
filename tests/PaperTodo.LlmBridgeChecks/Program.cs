@@ -221,6 +221,30 @@ Check(LlmAnswerFormatter.BuildAnswerNoteTitle(new string('长', 40), chinese: tr
     "Long titles are truncated to 24 characters plus an ellipsis.");
 Check(LlmAnswerFormatter.BuildAnswerNoteTitle("", chinese: false) == "LLM answer", "Empty text falls back.");
 
+// --- Paper question recording: the 问 section carries what was actually sent. ---
+var questionFromList = LlmAnswerFormatter.BuildPaperQuestion(
+    "清单", "todo", ["- [x] done", "- [ ] open"], null, false, chinese: true);
+Check(questionFromList == "- [x] done\n- [ ] open", "Todo-paper question is the joined list.");
+
+var emptyListQuestion = LlmAnswerFormatter.BuildPaperQuestion(
+    "清单", "todo", [], null, false, chinese: true);
+Check(emptyListQuestion == "（清单为空）", "Empty todo list explains itself.");
+
+Check(LlmAnswerFormatter.BuildPaperQuestion("笔记", "note", [], "# 正文", true, chinese: false) == "# 正文",
+    "Note-paper question is the note body.");
+Check(LlmAnswerFormatter.BuildPaperQuestion("笔记", "note", [], null, false, chinese: true) == "（无正文）",
+    "Unavailable note body explains itself.");
+Check(LlmAnswerFormatter.BuildPaperQuestion("插件纸", "plugin", [], null, false, chinese: false) ==
+      "(no exportable body)",
+    "Unknown types degrade to a marker.");
+
+var longQuestion = LlmAnswerFormatter.BuildPaperQuestion(
+    "笔记", "note", [],
+    new string('x', LlmAnswerFormatter.MaximumRecordedQuestionCharacters + 50), true, chinese: true);
+Check(longQuestion.Length < LlmAnswerFormatter.MaximumRecordedQuestionCharacters + 100,
+    "Recorded question stays bounded.");
+Check(longQuestion.Contains("问题内容过长已截断", StringComparison.Ordinal), "Question truncation is announced.");
+
 // --- Runtime state: bounded log with tolerant parsing and stable round-trip. ---
 Check(LlmRuntimeState.Read("").Requests.Count == 0, "Empty state starts clean.");
 Check(LlmRuntimeState.Read("{{{").Requests.Count == 0, "Malformed state starts clean.");

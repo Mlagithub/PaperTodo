@@ -167,6 +167,7 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
         private readonly IDisposable _workspaceSubscription;
         private readonly IDisposable _runtimePaperSubscription;
         private readonly HashSet<string> _inFlight = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _busyCounts = new(StringComparer.Ordinal);
         private readonly object _gate = new();
         private readonly CancellationTokenSource _cancellation = new();
         private LlmRuntimeState _state;
@@ -298,7 +299,10 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                 return;
             }
 
-            StartRequest($"todo:{invocation.Todo.Id}", () => RunTodoRequestAsync(invocation.Todo));
+            StartRequest(
+                $"todo:{invocation.Todo.Id}",
+                invocation.Todo.PaperId,
+                () => RunTodoRequestAsync(invocation.Todo));
         }
 
         private void OnTopBarAction(PaperTopBarActionInvocation invocation)
@@ -309,10 +313,13 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                 return;
             }
 
-            StartRequest($"paper:{invocation.TargetPaperId}", () => RunPaperRequestAsync(invocation.TargetPaperId));
+            StartRequest(
+                $"paper:{invocation.TargetPaperId}",
+                invocation.TargetPaperId,
+                () => RunPaperRequestAsync(invocation.TargetPaperId));
         }
 
-        private void StartRequest(string key, Func<Task> run)
+        private void StartRequest(string key, string? labelPaperId, Func<Task> run)
         {
             lock (_gate)
             {
@@ -322,6 +329,7 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                 }
             }
 
+            SetBusyLabel(labelPaperId, delta: +1);
             _ = Task.Run(async () =>
             {
                 try
@@ -337,12 +345,57 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                 }
                 finally
                 {
+                    SetBusyLabel(labelPaperId, delta: -1);
                     lock (_gate)
                     {
                         _inFlight.Remove(key);
                     }
                 }
             });
+        }
+
+        /// <summary>
+        /// Shows a busy label on the source paper's top bar while any of this provider's requests
+        /// touching that paper are in flight, so a click always gives immediate visible feedback.
+        /// The count handles concurrent requests that share one paper.
+        /// </summary>
+        private void SetBusyLabel(string? paperId, int delta)
+        {
+            if (string.IsNullOrWhiteSpace(paperId))
+            {
+                return;
+            }
+
+            int count;
+            lock (_gate)
+            {
+                _busyCounts[paperId] = Math.Max(0, _busyCounts.GetValueOrDefault(paperId) + delta);
+                count = _busyCounts[paperId];
+            }
+
+            try
+            {
+                if (count > 0)
+                {
+                    _context.TopBarLabels.SetLabels(paperId,
+                    [
+                        new PaperTopBarLabel
+                        {
+                            Text = T("⏳ LLM…", "⏳ LLM…"),
+                            ToolTip = T("LLM 请求进行中", "LLM request in flight"),
+                            Priority = 90
+                        }
+                    ]);
+                }
+                else
+                {
+                    _context.TopBarLabels.Clear(paperId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"[LlmBridge] Could not update the busy label: {ex}");
+            }
         }
 
         private async Task RunTodoRequestAsync(TodoSnapshot todo)
@@ -392,9 +445,36 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                             T("目标纸片已经不存在。", "The target paper no longer exists."));
 
             string prompt;
+            string question;
             try
             {
-                prompt = BuildPaperPrompt(paper);
+                var todoLines = new List<string>();
+                string? noteBody = null;
+                var noteBodyAvailable = false;
+                if (string.Equals(paper.Type, "todo", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var todo in _context.Workspace.ListTodos(paper.Id, includeBlank: false)
+                                 .OrderBy(value => value.Order))
+                    {
+                        var line = (todo.Done ? "- [x] " : "- [ ] ") + todo.Text;
+                        if (!string.IsNullOrWhiteSpace(todo.LinkedPath))
+                        {
+                            line += T("  [绑定路径: ", "  [Linked path: ") + todo.LinkedPath + "]";
+                        }
+                        todoLines.Add(line);
+                    }
+                }
+                else if (string.Equals(paper.Type, "note", StringComparison.OrdinalIgnoreCase))
+                {
+                    var note = _context.Workspace.GetNote(paper.Id);
+                    noteBody = note?.Content;
+                    noteBodyAvailable = note?.ContentAvailable == true;
+                }
+
+                prompt = LlmPromptBuilder.BuildPaperPrompt(
+                    paper.Title, paper.Id, paper.Type, noteBody, noteBodyAvailable, todoLines, _chinese);
+                question = LlmAnswerFormatter.BuildPaperQuestion(
+                    paper.Title, paper.Type, todoLines, noteBody, noteBodyAvailable, _chinese);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -419,13 +499,14 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
             {
                 CreateAnswerNote(
                     paper.Title,
+                    question,
                     T("⚠️ 请求失败：", "⚠️ Request failed: ") + ex.Message,
                     settings.Model);
                 AppendLog("error", SourceLabel(paper.Title), ex.Message);
                 return;
             }
 
-            CreateAnswerNote(paper.Title, answer, settings.Model);
+            CreateAnswerNote(paper.Title, question, answer, settings.Model);
             AppendLog("ok", SourceLabel(paper.Title), T("回答已写入新笔记。", "Answer written to a new note."));
         }
 
@@ -468,41 +549,6 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                 todo.LinkedPaperId,
                 linkedBody,
                 linkedBodyAvailable);
-        }
-
-        private string BuildPaperPrompt(PaperSnapshot paper)
-        {
-            var todoLines = new List<string>();
-            string? noteBody = null;
-            var noteBodyAvailable = false;
-            if (string.Equals(paper.Type, "todo", StringComparison.OrdinalIgnoreCase))
-            {
-                foreach (var todo in _context.Workspace.ListTodos(paper.Id, includeBlank: false)
-                             .OrderBy(value => value.Order))
-                {
-                    var line = (todo.Done ? "- [x] " : "- [ ] ") + todo.Text;
-                    if (!string.IsNullOrWhiteSpace(todo.LinkedPath))
-                    {
-                        line += T("  [绑定路径: ", "  [Linked path: ") + todo.LinkedPath + "]";
-                    }
-                    todoLines.Add(line);
-                }
-            }
-            else if (string.Equals(paper.Type, "note", StringComparison.OrdinalIgnoreCase))
-            {
-                var note = _context.Workspace.GetNote(paper.Id);
-                noteBody = note?.Content;
-                noteBodyAvailable = note?.ContentAvailable == true;
-            }
-
-            return LlmPromptBuilder.BuildPaperPrompt(
-                paper.Title,
-                paper.Id,
-                paper.Type,
-                noteBody,
-                noteBodyAvailable,
-                todoLines,
-                _chinese);
         }
 
         /// <summary>
@@ -562,6 +608,7 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
 
         private void CreateAnswerNote(
             string paperTitle,
+            string question,
             string answer,
             string model)
         {
@@ -573,7 +620,7 @@ public sealed class LlmBridgePlugin : IPaperBodyPlugin, IPaperPluginRuntimeProvi
                     Type = "note",
                     Title = LlmAnswerFormatter.BuildAnswerNoteTitle(paperTitle, _chinese),
                     Content = LlmAnswerFormatter.FormatNewNoteContent(
-                        paperTitle, model, answer, timeStamp, _chinese),
+                        question, model, answer, timeStamp, _chinese),
                     Show = true
                 });
             }
