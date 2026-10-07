@@ -1188,6 +1188,7 @@ Native 插件是 fully trusted / unsandboxed .NET/WPF 代码，与 PaperTodo 当
 | `PaperTodo.Plugin.OfficialClockWeb` | Web 主示例：body/mini 双页面、`miniEntry`、state/settings 同步、startup paper、background updates |
 | `PaperTodo.Plugin.FocusTimer` | Native 有状态交互：正文与 dedicated mini 共享计时 model，mini 内直接开始/暂停/继续 |
 | `PaperTodo.Plugin.ReviewArchive` | Workspace 数据读取/observe、插件 state 与长期数据的组合使用 |
+| `PaperTodo.Plugin.LlmBridge` | 无界面桥接示例：Runtime 中调用外部 HTTP API（OpenAI 兼容 LLM）、Todo actions、Global Top Bar、回答经 Workspace 写回笔记 |
 | `PaperTodo.Plugin.CloudGenshin` | 正文含 WebView2/native child 时：完整远程应用留正文，Edge Mini 使用独立 pure-WPF 状态面板 |
 
 开发新插件时优先从与目标最接近的示例复制最小结构，不要一次合并所有示例能力。
