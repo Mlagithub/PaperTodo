@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://apps.microsoft.com/detail/9pnfp27sjx13"><img src="https://img.shields.io/badge/Microsoft%20Store-Buy%20to%20Support-0078D4?logo=microsoftstore&logoColor=white" alt="Buy PaperTodo on Microsoft Store to support development"></a><br>
+  <a href="https://apps.microsoft.com/detail/9pnfp27sjx13"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="260" alt="Get it from Microsoft — purchase PaperTodo to support development"></a><br>
   <sub>PaperTodo 仍可在 GitHub 免费下载。如果你愿意支持项目持续开发，欢迎前往微软商店自愿购买。非常感谢！</sub>
 </p>
 
