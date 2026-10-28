@@ -281,7 +281,8 @@ internal sealed partial class WebPluginRuntime : IDisposable
                 clearAll() { return request('topbar.labels.clearAll'); }
               });
               const noteAssets = Object.freeze({
-                readImage(paperId, imageId) { return request('noteAssets.readImage', {paperId, imageId}); }
+                readImage(paperId, imageId) { return request('noteAssets.readImage', {paperId, imageId}); },
+                importImage(paperId, bytes, mime) { return request('noteAssets.importImage', {paperId, bytes, mime}); }
               });
               const popups = Object.freeze({
                 open(position, options) { return request('popups.open', {...options, position}); },

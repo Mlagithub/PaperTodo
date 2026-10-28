@@ -404,6 +404,52 @@ public sealed class NoteImageStore : IDisposable
             image.Height);
     }
 
+    public NoteImageAsset ImportEncodedImage(
+        string noteId,
+        byte[] bytes,
+        string? mime = null,
+        string? originalName = null)
+    {
+        if (_writeDisabled)
+        {
+            throw new InvalidOperationException(Strings.Get("ImageStoreUnavailable"));
+        }
+
+        if (string.IsNullOrWhiteSpace(noteId))
+        {
+            throw new InvalidOperationException(Strings.Get("ImageImportInvalidNote"));
+        }
+
+        ArgumentNullException.ThrowIfNull(bytes);
+        if (bytes.Length == 0)
+        {
+            throw new InvalidDataException(Strings.Get("ImageImportUnsupported"));
+        }
+        if (bytes.Length > MaxImageBytes)
+        {
+            throw new InvalidDataException(Strings.Format("ImageImportTooLarge", MaxImageBytes / 1024 / 1024));
+        }
+
+        if (!TryReadBitmapInfo(bytes, out _, out var width, out var height))
+        {
+            throw new InvalidDataException(Strings.Get("ImageImportUnsupported"));
+        }
+        ValidateImageDimensions(width, height);
+
+        var resolvedMime = !string.IsNullOrWhiteSpace(mime)
+            ? mime
+            : (MimeFromEncodedBytes(bytes) ?? "image/png");
+        var name = string.IsNullOrWhiteSpace(originalName) ? "image" : originalName;
+
+        return AddEncodedImage(
+            noteId,
+            bytes,
+            resolvedMime,
+            name,
+            width,
+            height);
+    }
+
     public IReadOnlyList<NoteImageAsset> ImportImageFiles(string noteId, IEnumerable<string> paths)
     {
         if (_writeDisabled)

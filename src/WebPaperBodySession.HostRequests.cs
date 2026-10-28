@@ -28,6 +28,12 @@ internal static class WebPluginWorkspaceRequests
         "noteAssets.readImage" => (host as IPaperNoteAssetsApi
             ?? throw new PaperTodoPluginException("note_assets_unavailable", "NoteAssets is unavailable."))
             .ReadImage(RequiredString(parameters, "paperId"), RequiredString(parameters, "imageId")),
+        "noteAssets.importImage" => (host as IPaperNoteAssetsApi
+            ?? throw new PaperTodoPluginException("note_assets_unavailable", "NoteAssets is unavailable."))
+            .ImportImage(
+                RequiredString(parameters, "paperId"),
+                OptionalString(parameters, "mime") ?? "image/png",
+                Convert.FromBase64String(RequiredString(parameters, "bytes"))),
         "papers.create" => host.CreatePaper(Deserialize<CreatePaperRequest>(parameters)),
         "todos.append" => host.AppendTodos(Deserialize<AppendTodosRequest>(parameters)),
         "todos.update" => host.UpdateTodo(Deserialize<UpdateTodoRequest>(parameters)),

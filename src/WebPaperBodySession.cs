@@ -298,7 +298,8 @@ internal sealed partial class WebPaperBodySession : IPaperBodySession
                 post(message) { return request('runtime.post', { message: message ?? null }); }
               });
               const noteAssets = Object.freeze({
-                readImage(paperId, imageId) { return request('noteAssets.readImage', {paperId, imageId}); }
+                readImage(paperId, imageId) { return request('noteAssets.readImage', {paperId, imageId}); },
+                importImage(paperId, bytes, mime) { return request('noteAssets.importImage', {paperId, bytes, mime}); }
               });
               const popups = Object.freeze({
                 open(position, options) { return request('popups.open', {...options, position}); },
@@ -794,7 +795,8 @@ internal sealed partial class WebPaperBodySession : IPaperBodySession
             OptionalPayloadString(parameters, "paperId"),
             OptionalPayloadBoolean(parameters, "includeBlank") ?? false),
         "notes.get" => _context.Host.GetNote(PayloadString(parameters, "paperId")),
-        "noteAssets.readImage" => WebPluginWorkspaceRequests.Execute(_context.Host, method, parameters),
+        "noteAssets.readImage" or
+        "noteAssets.importImage" => WebPluginWorkspaceRequests.Execute(_context.Host, method, parameters),
         "popups.open" or "popups.close" => WebPluginPopupRequests.Execute(
             _context.Popups, _context.Host, _manifest, method, parameters, message => Send(message)),
         "papers.create" => _context.Host.CreatePaper(

@@ -13,6 +13,12 @@ internal sealed partial class PaperBodyPluginHostApi : IPaperNoteAssetsApi, IPap
         return Invoke(() => _commands.ReadNoteImage(paperId, imageId));
     });
 
+    public PaperNoteImage ImportImage(string paperId, string mime, byte[] bytes) => PopupOnUi(() =>
+    {
+        Require(PaperTodoPermissionNames.NotesAppend);
+        return Invoke(() => _commands.ImportNoteImage(paperId, mime, bytes));
+    });
+
     public IPaperPluginPopup Open(PaperPopupPosition position, PaperPluginPopupOptions options,
         Func<PaperPluginPopupContext, IPaperPluginPopupContent> createContent) => PopupOnUi(() =>
     {

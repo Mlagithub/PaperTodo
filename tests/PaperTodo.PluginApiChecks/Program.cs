@@ -28,6 +28,7 @@ internal static partial class Program
         var checks = new (string Name, Action Run)[]
         {
             ("note-image-permissions-ownership-independent-bytes-limits", AssetReads),
+            ("note-image-import-permissions-storage-and-roundtrip", AssetImports),
             ("plain-menu-order-replacement-and-revocation", PaperActions),
             ("menu-adapter-permissions-and-cleanup", PaperActionAdapter),
             ("real-menu-dismissal-then-popup", MenuPopup),
@@ -96,6 +97,41 @@ internal static partial class Program
         asset.ByteLength = originalLength;
         api.Dispose();
         Error("session_closed", () => api.ReadImage("note-a", asset.Id));
+    }
+
+    private static void AssetImports()
+    {
+        using var temp = new Temp();
+        using var store = new NoteImageStore(Path.Combine(temp.Path, "assets.lmdb"));
+        store.Load();
+        var controller = Controller(new AppState { Papers =
+        [
+            new() { Id = "note-a", Type = PaperTypes.Note, BodyProviderId = PaperBodyProviderIds.Markdown, Title = "A" },
+            new() { Id = "todo", Type = PaperTypes.Todo, Title = "Todo" }
+        ] }, store);
+
+        var bitmap = BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgra32, null,
+            new byte[] { 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255 }, 8);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var ms = new MemoryStream();
+        encoder.Save(ms);
+        var pngBytes = ms.ToArray();
+
+        using var denied = BodyApi(controller, [PaperTodoPermissionNames.NotesRead]);
+        Error("permission_denied", () => denied.ImportImage("note-a", "image/png", pngBytes));
+
+        using var api = BodyApi(controller, [PaperTodoPermissionNames.NotesRead, PaperTodoPermissionNames.NotesAppend]);
+        var imported = api.ImportImage("note-a", "image/png", pngBytes);
+        Assert(!string.IsNullOrWhiteSpace(imported.ImageId), "Imported ImageId is empty.");
+        Assert(imported.Mime == "image/png", "Imported MIME does not match.");
+
+        var readBack = api.ReadImage("note-a", imported.ImageId);
+        Assert(readBack.Bytes.SequenceEqual(pngBytes), "Read-back bytes do not match imported bytes.");
+
+        Error("invalid_params", () => api.ImportImage("note-a", "image/png", []));
+        Error("wrong_paper_type", () => api.ImportImage("todo", "image/png", pngBytes));
+        Error("paper_not_found", () => api.ImportImage("missing", "image/png", pngBytes));
     }
 
     private static PaperAction Item(string id) => new() { Id = id, Text = id };

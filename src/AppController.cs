@@ -429,7 +429,7 @@ public sealed partial class AppController : IDisposable
             DispatcherPriority.ApplicationIdle);
     }
 
-    public PaperData? CreatePaper(string type, bool show = true, PaperData? sourcePaper = null)
+    public PaperData? CreatePaper(string type, bool show = true, PaperData? sourcePaper = null, string? paperId = null)
     {
         if (State.Papers.Count >= 200)
         {
@@ -483,6 +483,10 @@ public sealed partial class AppController : IDisposable
             IsVisible = show,
             AlwaysOnTop = sourcePaper?.AlwaysOnTop ?? false
         };
+        if (!string.IsNullOrWhiteSpace(paperId) && !State.Papers.Any(p => string.Equals(p.Id, paperId, StringComparison.Ordinal)))
+        {
+            paper.Id = paperId;
+        }
         InitializeNewPaperCapsuleQueue(paper, sourcePaper, cursorMonitor?.DeviceName);
 
         if (cursorMonitor is { } targetMonitor)
