@@ -434,7 +434,7 @@ Error: {0}</value>
     <value>Remember open position</value>
   </data>
   <data name="SettingsCollapseExpandedDeepCapsuleOnClick" xml:space="preserve">
-    <value>Click edge capsule again to retract paper</value>
+    <value>Click capsule again to retract paper</value>
   </data>
   <data name="SettingsHideEdgeCapsuleCloseButtonOnHover" xml:space="preserve">
     <value>Hide edge close button</value>
@@ -610,7 +610,7 @@ About 5 full-width characters on one line, 10 on multiline.</value>
     <value>When expanding from the edge, restore the last position and size; otherwise use edge placement.</value>
   </data>
   <data name="TipCollapseExpandedDeepCapsuleOnClick" xml:space="preserve">
-    <value>If the paper is already expanded from the edge, click the same capsule again to retract it.</value>
+    <value>Click the same capsule again to retract an expanded paper. If a linked paper is excluded from capsules, click its linked-paper entry again to hide it.</value>
   </data>
   <data name="TipCapsuleCollapseAll" xml:space="preserve">
     <value>Show a master capsule at the top of the queue to collapse or expand it.</value>
@@ -651,6 +651,12 @@ Settings info icons always stay available.</value>
   </data>
   <data name="TipEnableAnimations" xml:space="preserve">
     <value>Transition animations for common actions; off feels more immediate.</value>
+  </data>
+  <data name="SettingsFastAnimations" xml:space="preserve">
+    <value>Fast animations</value>
+  </data>
+  <data name="TipFastAnimations" xml:space="preserve">
+    <value>Shorten interface animations to about 60% of their normal duration for faster responses while keeping transitions. This has no effect when animations are disabled.</value>
   </data>
   <data name="SettingsResizeGripMode" xml:space="preserve">
     <value>Resize grip</value>
@@ -1111,6 +1117,12 @@ Per-note percentage zoom stacks on top.</value>
   <data name="TipDeepCapsuleTitleMeasureLimit" xml:space="preserve">
     <value>Limit the title shown by resting edge capsules. 0 hides the title but keeps the icon and stored title. Plus/minus cycle through Unlimited, 0, 1…20. With hover preview off, hovering reveals a shortened title; leaving restores the limit.</value>
   </data>
+  <data name="SettingsCompactMasterCapsule" xml:space="preserve">
+    <value>Shorten main capsule</value>
+  </data>
+  <data name="TipCompactMasterCapsule" xml:space="preserve">
+    <value>When enabled, the main capsule shows only the arrow and hides the capsule count for the current queue.</value>
+  </data>
   <data name="SettingsAllCharacters" xml:space="preserve">
     <value>Unlimited</value>
   </data>
@@ -1493,5 +1505,47 @@ When off, open at the docked edge or remembered position.</value>
   </data>
   <data name="SkinCaptureNotice" xml:space="preserve">
     <value>Capsules and menus take a temporary local snapshot of the background behind them; capsule dragging takes one low-resolution virtual-desktop snapshot. It is used only in local memory and is never saved or uploaded.</value>
+  </data>
+  <data name="MenuPaperActions" xml:space="preserve">
+    <value>Paper actions</value>
+  </data>
+  <data name="MenuCustomizeTopBar" xml:space="preserve">
+    <value>Customize title bar</value>
+  </data>
+  <data name="MenuReorderTopBar" xml:space="preserve">
+    <value>Reorder shortcuts</value>
+  </data>
+  <data name="MenuTopBarMoveLeft" xml:space="preserve">
+    <value>Move left</value>
+  </data>
+  <data name="MenuTopBarMoveRight" xml:space="preserve">
+    <value>Move right</value>
+  </data>
+  <data name="MenuTopBarAssociationDrag" xml:space="preserve">
+    <value>Hold and drag to associate</value>
+  </data>
+  <data name="MenuTopBarPluginActions" xml:space="preserve">
+    <value>Plugin actions</value>
+  </data>
+  <data name="TopBarSettingsTitle" xml:space="preserve">
+    <value>Top-bar shortcuts</value>
+  </data>
+  <data name="TipTopBarShortcutSettings" xml:space="preserve">
+    <value>Drag actions to reorder them or move them across the divider to switch between the title bar and menu. If space is limited, pinned built-in shortcuts move to the menu together.</value>
+  </data>
+  <data name="TopBarShownHeading" xml:space="preserve">
+    <value>Show in title bar</value>
+  </data>
+  <data name="TopBarMenuHeading" xml:space="preserve">
+    <value>Show in menu</value>
+  </data>
+  <data name="TopBarEmptyDropArea" xml:space="preserve">
+    <value>Drag an action here</value>
+  </data>
+  <data name="TopBarAssociation" xml:space="preserve">
+    <value>Drag to associate</value>
+  </data>
+  <data name="TopBarExternalEditor" xml:space="preserve">
+    <value>Open externally</value>
   </data>
 </root>

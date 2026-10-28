@@ -53,6 +53,11 @@ public sealed partial class PaperWindow
 
         var capture = new CancellationTokenSource();
         _capsuleDragBackgroundCapture = capture;
+        if (_capsulePointerState == CapsulePointerState.NativeMoving &&
+            _paperChrome is SkinBorder paperSurface)
+            paperSurface.BeginDragBackground();
+        if (IsDeepCapsuleReordering)
+            _edgeCapsuleHost?.BeginDragBackground();
         _ = PrepareCapsuleDragBackgroundAsync(excludeHwnd, capture);
     }
 
@@ -60,6 +65,7 @@ public sealed partial class PaperWindow
         IntPtr excludeHwnd,
         CancellationTokenSource capture)
     {
+        var retained = false;
         try
         {
             var snapshot = await DesktopBackgroundCapture.PrepareDragAsync(
@@ -67,13 +73,17 @@ public sealed partial class PaperWindow
                 capture.Token);
             if (snapshot == null ||
                 capture.IsCancellationRequested ||
-                !ReferenceEquals(capture, _capsuleDragBackgroundCapture))
+                !ReferenceEquals(capture, _capsuleDragBackgroundCapture) ||
+                !_controller.State.MatchAuxiliaryMaterialStrength ||
+                !PaperSkins.UsesSampledAuxiliary(Theme.Skin) ||
+                SystemParameters.HighContrast || !DwmMicaApi.Instance.EffectsEnabled)
             {
                 return;
             }
 
             _capsuleDragBackgroundSnapshot = snapshot;
             ApplyCapsuleDragBackground(snapshot);
+            retained = true;
         }
         catch (OperationCanceledException)
         {
@@ -81,12 +91,12 @@ public sealed partial class PaperWindow
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or
             InvalidOperationException or ExternalException or ArgumentException or NotSupportedException)
         {
-            if (ReferenceEquals(capture, _capsuleDragBackgroundCapture))
-            {
-                _capsuleDragBackgroundCapture = null;
-                capture.Dispose();
-            }
             Debug.WriteLine("Capsule drag background unavailable; keeping the live material: " + ex.Message);
+        }
+        finally
+        {
+            if (!retained && ReferenceEquals(capture, _capsuleDragBackgroundCapture))
+                EndCapsuleDragBackground();
         }
     }
 
@@ -718,7 +728,7 @@ public sealed partial class PaperWindow
         }
 
         PrepareForFormTransition();
-        BeginPaperFormTransition(collapsed);
+        BeginPaperFormTransition(collapsed, animate);
         var transitionGeneration = ++_collapseTransitionGeneration;
         var shouldRestoreCollapseStartPosition = collapsed &&
             IsVisible &&
@@ -793,7 +803,7 @@ public sealed partial class PaperWindow
             // the system accent outline in its transparent gutter while shrinking. Remove
             // it once at entry; the completion/settle paths restore the final resize mode.
             ResizeMode = ResizeMode.NoResize;
-            RefreshNativeMica(force: true);
+            RefreshNativeMica();
         }
         RefreshExperimentalOpacity();
         var expandedWidth = collapsed
@@ -816,13 +826,27 @@ var expandedHeight = collapsed
             // expanded native papers target edge-to-edge chrome.
             _targetTransitionChromeMargin = UsesNativePaperChrome ? 0 : WindowChromeMargin;
 
+            if (_controller.UsesNativeMicaWindows)
+            {
+                // Minimum changes can resize a live WPF HWND immediately. Establish the
+                // animation's lower bounds once; completion/settle restores the final policy.
+                MinWidth = Math.Min(PaperLayoutDefaults.MinWidth,
+                    Math.Min(RoundToDevicePixelX(_startTransitionWidth),
+                        RoundToDevicePixelX(_targetTransitionWidth)));
+                MinHeight = Math.Min(PaperLayoutDefaults.MinHeight,
+                    Math.Min(RoundToDevicePixelY(_startTransitionHeight),
+                        RoundToDevicePixelY(_targetTransitionHeight)));
+            }
+
             // Establish the initial visual BEFORE native placement can resize the HWND and
             // synchronously run WPF layout. Otherwise the full-size chrome is exposed first,
             // then reset to capsule size when the expand animation starts.
-            _shell.Width = Math.Max(0, expandedWidth - (_controller.UsesNativeMicaWindows
-        ? _paperChrome.BorderThickness.Left + _paperChrome.BorderThickness.Right : WindowChromeInset));
-            _shell.Height = Math.Max(0, expandedHeight - (_controller.UsesNativeMicaWindows
-        ? _paperChrome.BorderThickness.Top + _paperChrome.BorderThickness.Bottom : WindowChromeInset));
+            var expandedInset = _controller.UsesNativeMicaWindows ? 0 : WindowChromeInset;
+            _shell.Width = Math.Max(0, expandedWidth - expandedInset -
+                _paperChrome.BorderThickness.Left - _paperChrome.BorderThickness.Right);
+            _shell.Height = Math.Max(0, expandedHeight - expandedInset -
+                _paperChrome.BorderThickness.Top - _paperChrome.BorderThickness.Bottom);
+            _formContentHost.ExpandedSize = new Size(_shell.Width, _shell.Height);
             TransitionProgress = 0.0;
             UpdateTransitionVisuals(0.0);
             if (!collapsed)
@@ -830,6 +854,18 @@ var expandedHeight = collapsed
                 _shell.Opacity = 0.0;
                 _capsuleShell.Opacity = 1.0;
             }
+        }
+
+        if (animate && !collapsed && activateOnExpand)
+        {
+            // The initial capsule-sized frame is ready. Consume the user's activation before
+            // queue handoff or native surface preparation can pump/publish an expansion frame.
+            TryActivateAfterCapsuleInteraction();
+            // Activation invokes application/plugin handlers and may pump a Render turn.
+            // A reentrant hide, close or reversal must not continue this obsolete expansion.
+            if (transitionGeneration != _collapseTransitionGeneration ||
+                _windowLifecycle != PaperWindowLifecycleState.Alive || !IsPaperFormTransitioning)
+                return;
         }
 
         if (!collapsed)
@@ -942,11 +978,16 @@ var expandedHeight = collapsed
             {
                 From = 0.0,
                 To = 1.0,
-                Duration = TimeSpan.FromMilliseconds(collapsed ? CollapseResizeMilliseconds : ExpandAnimationMilliseconds),
-                BeginTime = collapsed ? TimeSpan.FromMilliseconds(CollapseShellFadeMilliseconds) : TimeSpan.Zero,
+                Duration = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(
+                    collapsed ? CollapseResizeMilliseconds : ExpandAnimationMilliseconds)),
+                BeginTime = collapsed
+                    ? TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(CollapseShellFadeMilliseconds))
+                    : TimeSpan.Zero,
                 EasingFunction = easeOut
             };
 
+            System.Windows.Media.Animation.DoubleAnimation shellAnimation;
+            System.Windows.Media.Animation.DoubleAnimation capsuleAnimation;
             if (collapsed)
             {
                 _shell.Opacity = 1.0;
@@ -956,20 +997,20 @@ var expandedHeight = collapsed
                 {
                     From = 1.0,
                     To = 0.0,
-                    Duration = TimeSpan.FromMilliseconds(CollapseShellFadeMilliseconds),
+                    Duration = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(CollapseShellFadeMilliseconds)),
                     EasingFunction = easeOut
                 };
-                _shell.BeginAnimation(UIElement.OpacityProperty, fadeOutShell);
+                shellAnimation = fadeOutShell;
 
                 var fadeInCapsule = new System.Windows.Media.Animation.DoubleAnimation
                 {
                     From = 0.0,
                     To = 1.0,
-                    Duration = TimeSpan.FromMilliseconds(CollapseResizeMilliseconds),
-                    BeginTime = TimeSpan.FromMilliseconds(CollapseShellFadeMilliseconds),
+                    Duration = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(CollapseResizeMilliseconds)),
+                    BeginTime = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(CollapseShellFadeMilliseconds)),
                     EasingFunction = easeOut
                 };
-                _capsuleShell.BeginAnimation(UIElement.OpacityProperty, fadeInCapsule);
+                capsuleAnimation = fadeInCapsule;
             }
             else
             {
@@ -981,20 +1022,20 @@ var expandedHeight = collapsed
                 {
                     From = 1.0,
                     To = 0.0,
-                    Duration = TimeSpan.FromMilliseconds(ExpandCapsuleFadeOutMilliseconds),
+                    Duration = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(ExpandCapsuleFadeOutMilliseconds)),
                     EasingFunction = easeOut
                 };
-                _capsuleShell.BeginAnimation(UIElement.OpacityProperty, fadeOutCapsule);
+                capsuleAnimation = fadeOutCapsule;
 
                 var fadeInShell = new System.Windows.Media.Animation.DoubleAnimation
                 {
                     From = 0.0,
                     To = 1.0,
-                    Duration = TimeSpan.FromMilliseconds(ExpandShellFadeInMilliseconds),
-                    BeginTime = TimeSpan.FromMilliseconds(ExpandCapsuleFadeOutMilliseconds),
+                    Duration = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(ExpandShellFadeInMilliseconds)),
+                    BeginTime = TimeSpan.FromMilliseconds(AnimationTiming.ScaleMilliseconds(ExpandCapsuleFadeOutMilliseconds)),
                     EasingFunction = easeOut
                 };
-                _shell.BeginAnimation(UIElement.OpacityProperty, fadeInShell);
+                shellAnimation = fadeInShell;
             }
 
             progressAnim.Completed += (s, e) =>
@@ -1073,7 +1114,17 @@ var expandedHeight = collapsed
                 UpdateTaskbarVisibility();
             };
 
-            BeginAnimation(TransitionProgressProperty, progressAnim);
+            void StartAnimation()
+            {
+                if (transitionGeneration != _collapseTransitionGeneration ||
+                    _windowLifecycle != PaperWindowLifecycleState.Alive || !IsPaperFormTransitioning)
+                    return;
+                _shell.BeginAnimation(UIElement.OpacityProperty, shellAnimation);
+                _capsuleShell.BeginAnimation(UIElement.OpacityProperty, capsuleAnimation);
+                BeginAnimation(TransitionProgressProperty, progressAnim);
+            }
+            if (_nativeMica != null) _nativeMica.StartFormAnimation(StartAnimation);
+            else StartAnimation();
         }
         else
         {
@@ -1135,6 +1186,12 @@ var expandedHeight = collapsed
                 FinishExpandSnapStateRestore();
             }
             UpdateTaskbarVisibility();
+            if (!collapsed && activateOnExpand &&
+                transitionGeneration == _collapseTransitionGeneration &&
+                _windowLifecycle == PaperWindowLifecycleState.Alive && !_paper.IsCollapsed)
+            {
+                TryActivateAfterCapsuleInteraction();
+            }
         }
 
         RefreshPaperContextMenus();
@@ -1142,29 +1199,32 @@ var expandedHeight = collapsed
 
         if (!collapsed && activateOnExpand)
         {
-            QueueActivateAfterExpandInteraction(transitionGeneration);
+            QueueRestoreFocusAfterExpandInteraction(transitionGeneration);
         }
     }
 
-    private void QueueActivateAfterExpandInteraction(int transitionGeneration)
+    private void QueueRestoreFocusAfterExpandInteraction(int transitionGeneration)
     {
-        // Capsule mouse-up handlers clear native keyboard focus after SetCollapsedState returns,
-        // and repeat that cleanup at Background priority. Run below Background so the explicit
-        // user activation is the final focus operation even when animations are disabled.
+        // Capsule mouse-up handlers clear native keyboard focus after SetCollapsedState returns.
+        // Repair that focus only while this interaction still owns the foreground. Never queue
+        // activation here: a later user switch must win, including during the animation.
         Dispatcher.BeginInvoke(
             (Action)(() =>
             {
                 if (transitionGeneration != _collapseTransitionGeneration ||
+                    _windowLifecycle != PaperWindowLifecycleState.Alive ||
                     _paper.IsCollapsed ||
                     !IsVisible ||
+                    IsExperimentalPassive ||
+                    WindowNative.ForegroundWindow != new WindowInteropHelper(this).Handle ||
                     _controller.FullscreenAvoidanceWindowFor(this) != IntPtr.Zero)
                 {
                     return;
                 }
 
-                TryActivateAfterCapsuleInteraction();
+                Focus();
             }),
-            System.Windows.Threading.DispatcherPriority.ContextIdle);
+            System.Windows.Threading.DispatcherPriority.Send);
     }
 
     // Runs when an expand transition finishes. If the paper was collapsed while maximized,

@@ -434,7 +434,7 @@ PaperTodo を手動でもう一度開いてください。問題が繰り返さ�
     <value>展開位置を記憶</value>
   </data>
   <data name="SettingsCollapseExpandedDeepCapsuleOnClick" xml:space="preserve">
-    <value>端のカプセルを再クリックして紙片を戻す</value>
+    <value>カプセルを再クリックして紙片を戻す</value>
   </data>
   <data name="SettingsHideEdgeCapsuleCloseButtonOnHover" xml:space="preserve">
     <value>閉じるボタンを隠す</value>
@@ -623,7 +623,7 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
     <value>端から開くとき、前回の位置とサイズを復元します。使えない場合は端寄せで開きます。</value>
   </data>
   <data name="TipCollapseExpandedDeepCapsuleOnClick" xml:space="preserve">
-    <value>端から開いた紙片に対し、同じカプセルをもう一度クリックすると戻します。</value>
+    <value>展開中の紙片は同じカプセルを再クリックすると戻ります。関連紙片をカプセルに表示しない場合は、関連入口を再クリックすると非表示になります。</value>
   </data>
   <data name="TipCapsuleCollapseAll" xml:space="preserve">
     <value>列の先頭にメインカプセルを表示し、現在の列を一括で折りたたみ／展開します。</value>
@@ -664,6 +664,12 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
   </data>
   <data name="TipEnableAnimations" xml:space="preserve">
     <value>よく使う操作に遷移アニメーションを付けます。オフにすると反応がより直接的になります。</value>
+  </data>
+  <data name="SettingsFastAnimations" xml:space="preserve">
+    <value>高速アニメーション</value>
+  </data>
+  <data name="TipFastAnimations" xml:space="preserve">
+    <value>画面アニメーションの時間を通常の約 60% に短縮し、遷移効果を残したまま操作を素早くします。「アニメーションを有効化」がオフの場合は適用されません。</value>
   </data>
   <data name="SettingsResizeGripMode" xml:space="preserve">
     <value>リサイズグリップ</value>
@@ -1111,6 +1117,12 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
   <data name="TipDeepCapsuleTitleMeasureLimit" xml:space="preserve">
     <value>静止時のエッジカプセルのタイトル長を制限します。0 は文字のみ非表示にし、アイコンと保存済みタイトルは保持します。＋／−で「無制限、0、1…20」を循環します。ホバープレビューがオフの場合、ホバーで省略されたタイトルを広げ、離れると戻します。</value>
   </data>
+  <data name="SettingsCompactMasterCapsule" xml:space="preserve">
+    <value>メインカプセルを短縮</value>
+  </data>
+  <data name="TipCompactMasterCapsule" xml:space="preserve">
+    <value>有効にすると、メインカプセルは矢印のみを表示し、現在のキューのカプセル数を非表示にします。</value>
+  </data>
   <data name="SettingsAllCharacters" xml:space="preserve">
     <value>無制限</value>
   </data>
@@ -1493,5 +1505,47 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
   </data>
   <data name="SkinCaptureNotice" xml:space="preserve">
     <value>カプセルとメニューは表示時に背後の局所背景を一度だけ取得し、カプセルのドラッグ時は低解像度の仮想デスクトップを一度だけ取得します。ローカルメモリ内でのみ使用し、保存やアップロードはしません。</value>
+  </data>
+  <data name="MenuPaperActions" xml:space="preserve">
+    <value>紙片の操作</value>
+  </data>
+  <data name="MenuCustomizeTopBar" xml:space="preserve">
+    <value>タイトルバーをカスタマイズ</value>
+  </data>
+  <data name="MenuReorderTopBar" xml:space="preserve">
+    <value>ボタンの順序を変更</value>
+  </data>
+  <data name="MenuTopBarMoveLeft" xml:space="preserve">
+    <value>左へ移動</value>
+  </data>
+  <data name="MenuTopBarMoveRight" xml:space="preserve">
+    <value>右へ移動</value>
+  </data>
+  <data name="MenuTopBarAssociationDrag" xml:space="preserve">
+    <value>押したままドラッグして関連付け</value>
+  </data>
+  <data name="MenuTopBarPluginActions" xml:space="preserve">
+    <value>プラグイン操作</value>
+  </data>
+  <data name="TopBarSettingsTitle" xml:space="preserve">
+    <value>上部バーのショートカット</value>
+  </data>
+  <data name="TipTopBarShortcutSettings" xml:space="preserve">
+    <value>ドラッグで並べ替え、区切り線を越えると上部バーとメニューの表示先を切り替えられます。幅が足りない場合、固定した標準ショートカットはまとめて一時的にメニューへ移動します。</value>
+  </data>
+  <data name="TopBarShownHeading" xml:space="preserve">
+    <value>上部バーに表示</value>
+  </data>
+  <data name="TopBarMenuHeading" xml:space="preserve">
+    <value>メニューに表示</value>
+  </data>
+  <data name="TopBarEmptyDropArea" xml:space="preserve">
+    <value>ここにドラッグ</value>
+  </data>
+  <data name="TopBarAssociation" xml:space="preserve">
+    <value>関連付けドラッグ</value>
+  </data>
+  <data name="TopBarExternalEditor" xml:space="preserve">
+    <value>外部エディターで開く</value>
   </data>
 </root>

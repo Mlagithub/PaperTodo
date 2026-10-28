@@ -33,6 +33,10 @@ public sealed partial class AppController
             value => State.EnableAnimations = value,
             SettingEffects.Animations,
             title: Strings.Get("SettingsEnableAnimations"));
+        yield return DefineSetting<bool>("appearance.fast_animations",
+            () => State.FastAnimations,
+            value => State.FastAnimations = value,
+            title: Strings.Get("SettingsFastAnimations"));
         yield return DefineSetting<string>("appearance.theme",
             () => State.Theme,
             value => State.Theme = value,
@@ -215,19 +219,20 @@ public sealed partial class AppController
             value => State.RunLinkedScriptCapsulesOnClick = value,
             SettingEffects.TodoRows,
             title: Strings.Get("SettingsRunLinkedScriptCapsulesOnClick"));
+        // Compatibility aliases now move items across a single global divider.
         yield return DefineSetting<bool>("topbar.new_todo",
-            () => State.ShowTopBarNewTodoButton,
-            value => State.ShowTopBarNewTodoButton = value,
+            () => PaperTopBarShortcuts.IsPinned(State, PaperTopBarShortcuts.NewTodo),
+            value => PaperTopBarShortcuts.SetPinned(State, PaperTopBarShortcuts.NewTodo, value),
             SettingEffects.TopBar,
             title: Strings.Get("SettingsShowTopBarNewTodoButton"));
         yield return DefineSetting<bool>("topbar.new_note",
-            () => State.ShowTopBarNewNoteButton,
-            value => State.ShowTopBarNewNoteButton = value,
+            () => PaperTopBarShortcuts.IsPinned(State, PaperTopBarShortcuts.NewNote),
+            value => PaperTopBarShortcuts.SetPinned(State, PaperTopBarShortcuts.NewNote, value),
             SettingEffects.TopBar,
             title: Strings.Get("SettingsShowTopBarNewNoteButton"));
         yield return DefineSetting<bool>("topbar.external_open",
-            () => State.ShowTopBarExternalOpenButton,
-            value => State.ShowTopBarExternalOpenButton = value,
+            () => PaperTopBarShortcuts.IsPinned(State, PaperTopBarShortcuts.ExternalEditor),
+            value => PaperTopBarShortcuts.SetPinned(State, PaperTopBarShortcuts.ExternalEditor, value),
             SettingEffects.TopBar,
             title: Strings.Get("SettingsShowTopBarExternalOpenButton"));
         yield return DefineSetting<bool>("window.hide_from_taskbar",
@@ -267,6 +272,12 @@ public sealed partial class AppController
             value => State.UseCapsuleCollapseAll = value,
             SettingEffects.CapsuleMode,
             title: Strings.Get("SettingsCapsuleCollapseAll"));
+        yield return DefineSetting<bool>("capsule.master_compact",
+            () => State.CompactMasterCapsule,
+            value => State.CompactMasterCapsule = value,
+            SettingEffects.Arrange,
+            title: Strings.Get("SettingsCompactMasterCapsule"),
+            description: "Show only the arrow in the master capsule and hide its queue count.");
         yield return DefineSetting<bool>("capsule.show_while_expanded",
             () => State.ShowDeepCapsuleWhileExpanded,
             value => State.ShowDeepCapsuleWhileExpanded = value,

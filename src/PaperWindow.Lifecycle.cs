@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace PaperTodo;
 
@@ -53,6 +54,7 @@ public sealed partial class PaperWindow
     }
 
     private PaperWindowLifecycleState _windowLifecycle = PaperWindowLifecycleState.Alive;
+    private bool _isClosingForReal;
     private PaperPresentationState _presentationState;
     private TitleBarDragSession? _titleBarDragSession;
     private int _titleEditIntentGeneration;
@@ -69,12 +71,18 @@ public sealed partial class PaperWindow
             : PaperPresentationState.Expanded;
     }
 
-    private void BeginPaperFormTransition(bool collapsed)
+    private void BeginPaperFormTransition(bool collapsed, bool animate)
     {
+        if (_paperChrome is SkinBorder surface) surface.SetFormTransition(true);
+        if (animate) _nativeMica?.PrepareFormTransition();
+        else _nativeMica?.CancelFormTransitionPreparation();
         _presentationState = collapsed
             ? PaperPresentationState.Collapsing
             : PaperPresentationState.Expanding;
-        RefreshNativeMica();
+        // IsCapsule changes to the target form before its size animation starts. Keep the
+        // current scene, but never acquire a new desktop snapshot for an intermediate frame.
+        if (_paperChrome is SkinBorder skin) skin.SetSampledBackgroundCaptureSuspended(true);
+        // Native refresh belongs after target/frame preparation in SetCollapsedStateCore.
     }
 
     private void CompletePaperFormTransition(bool collapsed)
@@ -84,11 +92,30 @@ public sealed partial class PaperWindow
             return;
         }
 
+        _nativeMica?.CancelFormTransitionPreparation();
+        if (_paperChrome is SkinBorder surface) surface.SetFormTransition(false);
         _presentationState = collapsed
             ? PaperPresentationState.Collapsed
             : PaperPresentationState.Expanded;
 
-        RefreshNativeMica();
+        // ResetTransitionVisuals may have chosen a temporary shadow while the
+        // state still said "transitioning". Re-select the actual endpoint here.
+        ApplyPaperChromePresentation();
+
+        if (_paperChrome is SkinBorder skin)
+        {
+            var generation = _collapseTransitionGeneration;
+            // Render/layout and already queued native geometry notifications must settle
+            // before the one endpoint capture. A reversed/closed transition cannot resume it.
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+            {
+                if (_windowLifecycle == PaperWindowLifecycleState.Alive &&
+                    generation == _collapseTransitionGeneration && !IsPaperFormTransitioning)
+                {
+                    skin.SetSampledBackgroundCaptureSuspended(false);
+                }
+            }));
+        }
 
         // Collapse: release images only after the form transition finishes so the fading shell
         // still shows bitmaps. Expand restores rendering earlier (when the shell becomes visible).
@@ -245,11 +272,16 @@ public sealed partial class PaperWindow
         // The compositor proxy can only hand off while this window still accepts endpoint frames.
         // Reveal the small real host before changing the lifecycle state to Closing.
         _controller.CompleteEdgeCapsuleQueueCompositionProxyFor(this);
+        if (_windowLifecycle != PaperWindowLifecycleState.Alive) return;
         // Controller exit already committed all editors and saved the final snapshot. Ordinary
         // close/hide still commits here; shutdown must not commit them for a second time.
         if (_controller.IsRunning) CommitPendingEditsForSave();
+        if (_windowLifecycle != PaperWindowLifecycleState.Alive) return;
+        _nativeMica?.CancelFormTransitionPreparation();
+        if (_paperChrome is SkinBorder surface) surface.SetFormTransition(false);
         _windowLifecycle = PaperWindowLifecycleState.Closing;
         _presentationState = PaperPresentationState.Closing;
+        if (_paperChrome is SkinBorder skin) skin.SetSampledBackgroundCaptureSuspended(true);
         _collapseTransitionGeneration++;
         CancelPaperFormAnimationClocks();
         AbortAllInteractions(InteractionAbortReason.Closing);

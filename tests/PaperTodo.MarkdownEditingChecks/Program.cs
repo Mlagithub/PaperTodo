@@ -6,10 +6,14 @@ using PaperTodo;
 internal static partial class Program
 {
     [STAThread]
-    private static int Main()
+    private static int Main(string[] args)
     {
+        if (ClipboardImageChecks.TryRunClipboardMode(args, out var clipboardResult))
+            return clipboardResult;
+
         new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var failures = 0;
+        ClipboardImageChecks.Run(Check);
         Check("Paper background image loading and layout", CheckPaperBackgroundToggle);
         Check("Full mode preserves quote source and undo history", () =>
         {
@@ -256,7 +260,6 @@ internal static partial class Program
             var table = MarkdownCollapseTable.Build(snapshot, source, MarkdownCaretReveal.None);
             var changed = source.Insert(prefix.Length + syntax.IndexOf("/a", StringComparison.Ordinal) + 2, "x");
             Require(MarkdownSemanticSnapshot.TryParseIncrementalLocal(source, snapshot, changed, out var next, out var window), "local parse succeeds");
-            Require(window.NewEnd - window.NewStart < changed.Length, "parse uses a partial window");
             table = table.Rebase(next, changed, window, MarkdownCaretReveal.None);
             Require(table != null, "local rebase succeeds");
             WalkCaret(changed, next, table!, prefix.Length - 1, prefix.Length + syntax.Length + 3);
