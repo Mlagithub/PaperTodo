@@ -27,11 +27,17 @@ public interface IPaperPluginPaperActions
 /// <summary>An independent copy of the encoded image, never a store buffer or file path.</summary>
 public sealed record PaperNoteImage(string ImageId, string Mime, byte[] Bytes);
 
-/// <summary>Requires notes.read. Only the specified built-in Markdown note's images are readable.</summary>
+/// <summary>Requires notes.read for reads, and notes.append for image imports. Only built-in Markdown note images are handled.</summary>
 public interface IPaperNoteAssetsApi
 {
     const int MaximumImageBytes = 16 * 1024 * 1024;
     PaperNoteImage ReadImage(string paperId, string imageId);
+
+    /// <summary>
+    /// Requires notes.append. Imports encoded image bytes for the specified built-in Markdown note,
+    /// storing it in the host's image store and returning its assigned image metadata.
+    /// </summary>
+    PaperNoteImage ImportImage(string paperId, string mime, byte[] bytes);
 }
 
 public sealed record PaperPluginPopupOptions

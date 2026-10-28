@@ -192,6 +192,7 @@ public sealed record TodoCreateItem
 
 public sealed record CreatePaperRequest
 {
+    public string? PaperId { get; init; }
     public string Type { get; init; } = "todo";
     public string? Title { get; init; }
     public bool Show { get; init; } = true;

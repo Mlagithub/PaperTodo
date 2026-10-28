@@ -41,6 +41,10 @@ internal static class Program
                 foreach (var id in new[] { "warm", "ink", "forest", "rose", "mica" })
                     Assert(ColorSchemes.IsValid(id) && ColorSchemes.Normalize(id) == id, id);
                 Assert(ColorSchemes.All.Distinct().Count() == 5, "unique skins");
+                Assert(PaperSkins.IsValid(PaperSkins.Crystal), "crystal is valid");
+                Assert(PaperSkins.UsesNativeBackdrop(PaperSkins.Crystal), "crystal uses native backdrop");
+                Assert(PaperSkins.IsDecorated(PaperSkins.Crystal), "crystal is decorated");
+                Assert(PaperSkins.All.Contains(PaperSkins.Crystal), "crystal in All");
                 Assert(ColorSchemes.Normalize(null) == ColorSchemes.Warm, "null default");
                 Assert(ColorSchemes.Normalize("future") == ColorSchemes.Warm, "unknown default");
                 Assert(MicaBackdropTypes.Normalize(null) == MicaBackdropTypes.Mica, "null mica backdrop default");

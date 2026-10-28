@@ -13,6 +13,12 @@ internal sealed partial class PaperPluginRuntimeWorkspaceApi :
         return _inner.ReadImage(paperId, imageId);
     });
 
+    public PaperNoteImage ImportImage(string paperId, string mime, byte[] bytes) => OnUi(() =>
+    {
+        EnsureUsable();
+        return _inner.ImportImage(paperId, mime, bytes);
+    });
+
     void IPaperPluginPaperActions.SetActionHandler(Action<PaperActionInvocation>? handler) => OnUi(() =>
     {
         EnsureUsable();

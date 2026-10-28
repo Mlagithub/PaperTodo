@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../plugin-samples/PaperTodo.Plugin.LlmBridge/LlmBridgeSettings.cs" Link="LlmBridgeSettings.cs" />
+    <Compile Include="../../plugin-samples/PaperTodo.Plugin.LlmBridge/LlmChatRequest.cs" Link="LlmChatRequest.cs" />
+  </ItemGroup>
+</Project>

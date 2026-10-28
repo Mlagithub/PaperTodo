@@ -1476,6 +1476,9 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
   <data name="SkinPixel" xml:space="preserve">
     <value>ピクセル</value>
   </data>
+  <data name="SkinCrystal" xml:space="preserve">
+    <value>クリスタルガラス</value>
+  </data>
   <data name="TipSkinTracingPaper" xml:space="preserve">
     <value>乳白色と細かな繊維模様で背景色をほのかに透かし、文字の読みやすさを保ちます。</value>
   </data>
@@ -1484,6 +1487,9 @@ papertodo と PaperTodo_Bold（.ttf/.otf）の両方を置いてください。<
   </data>
   <data name="TipSkinPixel" xml:space="preserve">
     <value>レトロなクエストパネル風。小さな段状の角、一重の外枠、ピクセル整列アイコン、四角い操作部。本文は通常のフォントです。</value>
+  </data>
+  <data name="TipSkinCrystal" xml:space="preserve">
+    <value>135°の物理リムハイライトと高い透明度を備えたクリスタルガラス。文字の可読性を保ちます。</value>
   </data>
   <data name="SkinRestartRequired" xml:space="preserve">
     <value>ネイティブ背景を有効にするには PaperTodo を再起動してください。</value>

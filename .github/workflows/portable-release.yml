@@ -1,0 +1,173 @@
+name: Build and Publish Portable Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to create or update (e.g. v4.0.0-beta1). Defaults to v<project version>."
+        required: false
+        type: string
+      prerelease:
+        description: "Mark as prerelease"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Self-Contained Portable Package & Publish
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "true"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build native LMDB library
+        run: .\native\lmdb\build.ps1 -Configuration Release -ForceRebuild
+
+      - name: Read project metadata
+        id: meta
+        run: |
+          $project = [xml](Get-Content -LiteralPath .\PaperTodo.csproj -Raw)
+          $versionNodes = $project.SelectNodes('/Project/PropertyGroup/Version')
+          if ($versionNodes.Count -ne 1) {
+            throw "PaperTodo.csproj must define exactly one <Version> element."
+          }
+          $version = ([string]$versionNodes[0].InnerText).Trim()
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "self_contained_exe=PaperTodo-v$version-win-x64-self-contained.exe" >> $env:GITHUB_OUTPUT
+          "no_runtime_exe=PaperTodo-v$version-win-x64-no-runtime.exe" >> $env:GITHUB_OUTPUT
+          "zip_name=PaperTodo-v$version-win-x64-portable.zip" >> $env:GITHUB_OUTPUT
+
+          $tag = "${{ inputs.release_tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = "v$version"
+          }
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Restore dependencies
+        run: dotnet restore .\PaperTodo.csproj
+
+      - name: Build and Publish Self-Contained Executable
+        run: |
+          $outDir = "dist/self-contained"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          dotnet publish .\PaperTodo.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -o $outDir `
+            /p:PublishSingleFile=true `
+            /p:PublishReadyToRun=false `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true `
+            /p:PublishTrimmed=false `
+            /p:EmbedAllSources=false `
+            /p:EmbedUntrackedSources=false `
+            /p:DebugType=none `
+            /p:DebugSymbols=false
+
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build and Publish No-Runtime Executable
+        run: |
+          $outDir = "dist/no-runtime"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+          dotnet publish .\PaperTodo.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -o $outDir `
+            /p:PublishSingleFile=true `
+            /p:PublishReadyToRun=false `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=false `
+            /p:PublishTrimmed=false `
+            /p:EmbedAllSources=false `
+            /p:EmbedUntrackedSources=false `
+            /p:DebugType=none `
+            /p:DebugSymbols=false
+
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build Native Plugins
+        run: |
+          # Build and install MinIO Sync plugin
+          & .\plugin-samples\Build-And-Install-NativePlugin.ps1 -ProjectPath .\plugin-samples\PaperTodo.Plugin.MinioSync\PaperTodo.Plugin.MinioSync.csproj
+          # Build and install LLM Bridge plugin
+          & .\plugin-samples\Build-And-Install-NativePlugin.ps1 -ProjectPath .\plugin-samples\PaperTodo.Plugin.LlmBridge\PaperTodo.Plugin.LlmBridge.csproj
+
+      - name: Assemble Portable Distribution (Like C:\Users\keep_\app\PaperTodo-v4.0.0)
+        run: |
+          $version = "${{ steps.meta.outputs.version }}"
+          $portableDir = "dist/PaperTodo-v$version"
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+
+          # 1. Self-contained PaperTodo.exe (runs directly without .NET runtime)
+          Copy-Item -Path "dist/self-contained/PaperTodo.exe" -Destination (Join-Path $portableDir "PaperTodo.exe") -Force
+          Copy-Item -Path "dist/self-contained/PaperTodo.exe" -Destination (Join-Path $portableDir "${{ steps.meta.outputs.self_contained_exe }}") -Force
+
+          # 2. Framework-dependent exe
+          Copy-Item -Path "dist/no-runtime/PaperTodo.exe" -Destination (Join-Path $portableDir "${{ steps.meta.outputs.no_runtime_exe }}") -Force
+
+          # 3. Pre-bundled plugins directory
+          $targetPlugins = Join-Path $portableDir "plugins"
+          New-Item -ItemType Directory -Force -Path $targetPlugins | Out-Null
+          Copy-Item -Path "plugins/*" -Destination $targetPlugins -Recurse -Force
+
+          # 4. Pack into portable zip
+          $zipPath = "dist/${{ steps.meta.outputs.zip_name }}"
+          Compress-Archive -Path "$portableDir/*" -DestinationPath $zipPath -Force
+
+          Write-Host "Created portable distribution package: $zipPath"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.zip_name }}
+          path: |
+            dist/${{ steps.meta.outputs.zip_name }}
+            dist/PaperTodo-v${{ steps.meta.outputs.version }}/${{ steps.meta.outputs.self_contained_exe }}
+            dist/PaperTodo-v${{ steps.meta.outputs.version }}/${{ steps.meta.outputs.no_runtime_exe }}
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.release_tag }}
+          name: PaperTodo ${{ steps.meta.outputs.release_tag }} (自包含绿色版)
+          prerelease: ${{ inputs.prerelease || true }}
+          files: |
+            dist/${{ steps.meta.outputs.zip_name }}
+            dist/PaperTodo-v${{ steps.meta.outputs.version }}/${{ steps.meta.outputs.self_contained_exe }}
+            dist/PaperTodo-v${{ steps.meta.outputs.version }}/${{ steps.meta.outputs.no_runtime_exe }}
+          body: |
+            ### 📦 PaperTodo ${{ steps.meta.outputs.release_tag }} 自包含绿色完整版
+
+            - **${{ steps.meta.outputs.zip_name }}**：**推荐下载此包**。解压即用，包含内置 .NET 10 运行时自包含主程序 `PaperTodo.exe` 及所有预置插件（包含 MinIO 同步接力插件、LLM Bridge 插件、时钟与番茄钟等），与本地绿色部署体验完全一致；
+            - **${{ steps.meta.outputs.self_contained_exe }}**：自包含单文件版主程序（电脑未安装 .NET 10 也可直接运行）；
+            - **${{ steps.meta.outputs.no_runtime_exe }}**：轻量框架依赖版（需要系统预装 .NET 10 Desktop Runtime）。
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

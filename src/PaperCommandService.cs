@@ -126,7 +126,7 @@ internal sealed partial class PaperCommandService
         PaperData paper;
         using (_controller.SuppressPaperPluginEventScans())
         {
-            paper = _controller.CreatePaper(type, show: false)
+            paper = _controller.CreatePaper(type, show: false, paperId: request.PaperId)
                 ?? throw Error("paper_limit", "PaperTodo cannot create another paper.");
             paper.IsVisible = request.Show;
             if (title != null)

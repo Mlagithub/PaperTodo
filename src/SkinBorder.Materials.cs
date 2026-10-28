@@ -8,6 +8,10 @@ internal sealed partial class SkinBorder
 {
     private Brush _header = Brushes.Transparent;
     private Brush _aeroReadabilityVeil = Brushes.Transparent;
+    private Brush _crystalReadabilityVeil = Brushes.Transparent;
+    private Brush? _crystalTopBrush;
+    private LinearGradientBrush? _crystalRimBrush;
+    private Pen? _crystalRimPen;
     private readonly MatrixTransform _reflectionShift = new();
     private readonly LinearGradientBrush _aeroReflection = new()
     {
@@ -30,6 +34,10 @@ internal sealed partial class SkinBorder
         _surfaceVersion++;
         var paper = palette.Surface;
         _aeroReadabilityVeil = Brushes.Transparent;
+        _crystalReadabilityVeil = Brushes.Transparent;
+        _crystalTopBrush = null;
+        _crystalRimBrush = null;
+        _crystalRimPen = null;
         if (UseLightweightMaterial && PaperSkins.UsesNativeBackdrop(Skin))
         {
             var preview = palette.Preview;
@@ -114,14 +122,54 @@ internal sealed partial class SkinBorder
                 var tracing = Mix(paper, _dark ? Color.FromRgb(29, 30, 32) : Colors.White, .50);
                 _fill = Gradient(0, WithAlpha(tracing, alpha), 1, WithAlpha(Mix(tracing, paper, .10), alpha));
                 break;
+            case PaperSkins.Crystal:
+                var crystalBase = _dark ? Color.FromRgb(22, 25, 32) : Colors.White;
+                var crystalTinted = Mix(crystalBase, paper, .30);
+                var crystalTop = Mix(crystalTinted, _dark ? Color.FromRgb(245, 248, 255) : Colors.White, _dark ? .14 : .25);
+                var crystalBottom = Mix(crystalTinted, _dark ? Color.FromRgb(12, 14, 18) : Color.FromRgb(215, 222, 235), .15);
+                byte cAlpha = (byte)Math.Min(255, alpha + 20);
+                _fill = Frozen(new LinearGradientBrush(new GradientStopCollection
+                {
+                    new(WithAlpha(crystalTop, cAlpha), 0),
+                    new(WithAlpha(crystalTinted, cAlpha), .35),
+                    new(WithAlpha(crystalBottom, cAlpha), 1)
+                }, new Point(0, 0), new Point(0, 1)));
+
+                // 135° Rim Light (Glance-style physical edge light: brightest at top-left, subtle at bottom-right)
+                _crystalRimBrush = Frozen(new LinearGradientBrush(new GradientStopCollection
+                {
+                    new(White(_dark ? 175 : 225), 0),
+                    new(White(_dark ? 65 : 95), .22),
+                    new(White(_dark ? 20 : 35), .50),
+                    new(White(_dark ? 35 : 50), .78),
+                    new(White(_dark ? 80 : 120), 1)
+                }, new Point(0, 0), new Point(1, 1)));
+                _crystalRimPen = Frozen(new Pen(_crystalRimBrush, 1.25));
+
+                _shine = Gradient(0, White(_dark ? 28 : 55), 1, White(0));
+                _crystalTopBrush = Frozen(new SolidColorBrush(White(_dark ? 35 : 65)));
+
+                var cReadability = MaterialTransparencyLevels.Normalize(
+                    AppController.Current?.State.MaterialTransparency) switch
+                {
+                    MaterialTransparencyLevels.VeryLow => _dark ? (byte)150 : (byte)165,
+                    MaterialTransparencyLevels.Low => _dark ? (byte)125 : (byte)140,
+                    MaterialTransparencyLevels.High => _dark ? (byte)75 : (byte)85,
+                    MaterialTransparencyLevels.VeryHigh => _dark ? (byte)50 : (byte)60,
+                    _ => _dark ? (byte)100 : (byte)115
+                };
+                _crystalReadabilityVeil = Frozen(new SolidColorBrush(_dark
+                    ? Color.FromArgb(cReadability, 18, 20, 26)
+                    : Color.FromArgb(cReadability, 255, 255, 255)));
+                break;
         }
     }
 
     private void PaintMaterialDetails(DrawingContext dc)
     {
-        if (UseLightweightMaterial && Skin == PaperSkins.Aero)
+        if (UseLightweightMaterial && Skin is PaperSkins.Aero or PaperSkins.Crystal)
         {
-            // Preview changes size every frame without rebuilding relief strips.
+            // Preview changes size every frame without rebuilding relief strips or decorative overlays.
             return;
         }
         if (Skin == PaperSkins.Aero)
@@ -143,6 +191,19 @@ internal sealed partial class SkinBorder
                 _reliefKey = key;
             }
             dc.DrawDrawing(_relief);
+        }
+        if (Skin == PaperSkins.Crystal)
+        {
+            dc.DrawRectangle(_crystalReadabilityVeil, null, new Rect(RenderSize));
+            if (_shape != null && _crystalRimPen != null)
+            {
+                dc.DrawGeometry(null, _crystalRimPen, _shape);
+            }
+            if (!IsCapsule && RenderSize.Width > 12 && RenderSize.Height > 12 && _crystalTopBrush != null)
+            {
+                var topInset = new Rect(2, 2, Math.Max(0, RenderSize.Width - 4), Math.Min(2, RenderSize.Height / 4));
+                dc.DrawRoundedRectangle(_crystalTopBrush, null, topInset, 2, 2);
+            }
         }
         if (Skin == PaperSkins.Pixel && !IsCapsule && HeaderHeight > 0)
         {
@@ -175,6 +236,7 @@ internal sealed partial class SkinBorder
             PaperSkins.ClearAcrylic => 12,
             PaperSkins.TracingPaper => 10,
             PaperSkins.Aero => 10,
+            PaperSkins.Crystal => 12,
             _ => 0
         };
         return (byte)Math.Min(255, alpha + extra);

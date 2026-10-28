@@ -1187,6 +1187,7 @@ For select controls that need host-consistent visuals, use `PaperBodyContext.Bod
 | `PaperTodo.Plugin.OfficialClockWeb` | Main Web sample: body/mini pages, `miniEntry`, state/settings synchronization, startup Paper, background updates |
 | `PaperTodo.Plugin.FocusTimer` | Stateful Native interaction: body and dedicated mini share a timer model; start/pause/resume directly from Mini |
 | `PaperTodo.Plugin.ReviewArchive` | Workspace reads/observe plus combined use of plugin state and long-lived data |
+| `PaperTodo.Plugin.LlmBridge` | Headless bridge sample: calling an external HTTP API (OpenAI-compatible LLM) from the Runtime, Todo actions, Global Top Bar, writing answers back through Workspace |
 | `PaperTodo.Plugin.CloudGenshin` | Body containing WebView2/native child content: keep the full remote app in Body and use a separate pure-WPF status panel for Edge Mini |
 
 When starting a new plugin, copy the smallest structure from the sample closest to your target. Do not combine every sample capability at once.
