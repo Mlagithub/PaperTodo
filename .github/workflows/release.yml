@@ -44,7 +44,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           # wpf-notifyicon uses Nerdbank.GitVersioning, which needs history far enough
           # to calculate version height. A depth-1 parent checkout also shallow-clones
@@ -53,7 +53,7 @@ jobs:
           submodules: recursive
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
@@ -137,7 +137,7 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $frameworkDependentOut "PaperTodo.exe") -Destination (Join-Path $releaseDir $env:FRAMEWORK_DEPENDENT_EXE)
 
       - name: Upload executable package
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: PaperTodo-v${{ steps.meta.outputs.version }}-win-x64
           if-no-files-found: error
@@ -184,7 +184,7 @@ jobs:
           "tag=$tag" >> $env:GITHUB_OUTPUT
 
       - name: Set up Python for release notes
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
