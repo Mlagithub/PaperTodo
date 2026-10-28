@@ -31,7 +31,7 @@ internal sealed partial class SkinBorder
         PaperSkins.UsesSampledAuxiliary(Skin);
     private bool IsMaterialHostVisible => _materialHost?.IsVisible == true;
     private bool HasAuxiliaryTransmission => IsAuxiliary && FullAuxiliaryMaterial &&
-        Skin is PaperSkins.Aero or PaperSkins.Crystal && !_highContrast && DwmMicaApi.Instance.EffectsEnabled &&
+        Skin == PaperSkins.Aero && !_highContrast && DwmMicaApi.Instance.EffectsEnabled &&
         (IsMenu || IsLoaded && IsVisible && IsMaterialHostVisible);
 
     protected override int VisualChildrenCount => base.VisualChildrenCount + (BackgroundVisual == null ? 0 : 1);
@@ -53,7 +53,7 @@ internal sealed partial class SkinBorder
     {
         var sampled = RequestsSampledBackground;
         var observe = IsLoaded && IsVisible && !IsOutline && !UseLightweightMaterial && !_highContrast &&
-            (sampled || Skin is PaperSkins.Aero or PaperSkins.Crystal && (IsAuxiliary || _animateReflection));
+            (sampled || Skin == PaperSkins.Aero && (IsAuxiliary || _animateReflection));
         if (observe)
         {
             _materialHost ??= new MaterialSurfaceHost(this, OnMaterialHostChanged);

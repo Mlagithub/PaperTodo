@@ -123,40 +123,43 @@ internal sealed partial class SkinBorder
                 _fill = Gradient(0, WithAlpha(tracing, alpha), 1, WithAlpha(Mix(tracing, paper, .10), alpha));
                 break;
             case PaperSkins.Crystal:
-                var crystalBase = opaque ? Mix(((SolidColorBrush)Theme.PaperBrush).Color, paper, .12) : paper;
-                var crystalTop = Mix(crystalBase, _dark ? Color.FromRgb(240, 245, 255) : Colors.White, _dark ? .08 : .15);
-                var crystalBottom = Mix(crystalBase, _dark ? Color.FromRgb(10, 12, 18) : Color.FromRgb(220, 225, 235), .10);
-                byte cAlpha = alpha;
+                var crystalBase = _dark ? Color.FromRgb(22, 25, 32) : Colors.White;
+                var crystalTinted = Mix(crystalBase, paper, .30);
+                var crystalTop = Mix(crystalTinted, _dark ? Color.FromRgb(245, 248, 255) : Colors.White, _dark ? .14 : .25);
+                var crystalBottom = Mix(crystalTinted, _dark ? Color.FromRgb(12, 14, 18) : Color.FromRgb(215, 222, 235), .15);
+                byte cAlpha = (byte)Math.Min(255, alpha + 20);
                 _fill = Frozen(new LinearGradientBrush(new GradientStopCollection
                 {
                     new(WithAlpha(crystalTop, cAlpha), 0),
-                    new(WithAlpha(crystalBase, cAlpha), .35),
+                    new(WithAlpha(crystalTinted, cAlpha), .35),
                     new(WithAlpha(crystalBottom, cAlpha), 1)
                 }, new Point(0, 0), new Point(0, 1)));
 
                 // 135° Rim Light (Glance-style physical edge light: brightest at top-left, subtle at bottom-right)
                 _crystalRimBrush = Frozen(new LinearGradientBrush(new GradientStopCollection
                 {
-                    new(White(_dark ? 130 : 190), 0),
-                    new(White(_dark ? 40 : 60), .22),
-                    new(White(_dark ? 12 : 20), .50),
-                    new(White(_dark ? 22 : 35), .78),
-                    new(White(_dark ? 55 : 85), 1)
+                    new(White(_dark ? 175 : 225), 0),
+                    new(White(_dark ? 65 : 95), .22),
+                    new(White(_dark ? 20 : 35), .50),
+                    new(White(_dark ? 35 : 50), .78),
+                    new(White(_dark ? 80 : 120), 1)
                 }, new Point(0, 0), new Point(1, 1)));
                 _crystalRimPen = Frozen(new Pen(_crystalRimBrush, 1.25));
-                _shine = Gradient(0, White(_dark ? 14 : 24), 1, White(0));
 
-                _crystalTopBrush = Frozen(new SolidColorBrush(White(_dark ? 25 : 45)));
+                _shine = Gradient(0, White(_dark ? 28 : 55), 1, White(0));
+                _crystalTopBrush = Frozen(new SolidColorBrush(White(_dark ? 35 : 65)));
 
                 var cReadability = MaterialTransparencyLevels.Normalize(
                     AppController.Current?.State.MaterialTransparency) switch
                 {
-                    MaterialTransparencyLevels.VeryLow => _dark ? (byte)26 : (byte)32,
-                    MaterialTransparencyLevels.Low => _dark ? (byte)20 : (byte)25,
-                    _ => _dark ? (byte)14 : (byte)18
+                    MaterialTransparencyLevels.VeryLow => _dark ? (byte)150 : (byte)165,
+                    MaterialTransparencyLevels.Low => _dark ? (byte)125 : (byte)140,
+                    MaterialTransparencyLevels.High => _dark ? (byte)75 : (byte)85,
+                    MaterialTransparencyLevels.VeryHigh => _dark ? (byte)50 : (byte)60,
+                    _ => _dark ? (byte)100 : (byte)115
                 };
                 _crystalReadabilityVeil = Frozen(new SolidColorBrush(_dark
-                    ? Color.FromArgb(cReadability, 0, 0, 0)
+                    ? Color.FromArgb(cReadability, 18, 20, 26)
                     : Color.FromArgb(cReadability, 255, 255, 255)));
                 break;
         }

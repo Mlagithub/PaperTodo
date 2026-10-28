@@ -24,15 +24,15 @@ public static class PaperSkins
         Resolve(state?.PaperSkin, state?.ColorScheme, state?.MicaBackdropType);
     public static bool UsesNativeBackdrop(string? id) => id is Mica or Acrylic or ClearAcrylic or
         TracingPaper or Aero or Crystal;
-    internal static bool UsesSampledAuxiliary(string? id) => id is Mica or Acrylic or ClearAcrylic or TracingPaper;
+    internal static bool UsesSampledAuxiliary(string? id) => id is Mica or Acrylic or ClearAcrylic or TracingPaper or Crystal;
     public static bool IsSystemMaterial(string? id) => id is Mica or Acrylic or ClearAcrylic;
     public static bool IsDecorated(string? id) => id is TracingPaper or Aero or Pixel or Crystal;
     public static bool Decorate(string? id, bool highContrast) => !highContrast && IsDecorated(id);
-    // Tracing retains system Acrylic. Aero and Crystal use clear alpha without Acrylic blur.
+    // Tracing and Crystal retain system Acrylic blur. Aero uses clear alpha without Acrylic blur.
     public static string NativeBackdrop(string? id) => id switch
     {
-        Acrylic or TracingPaper => MicaBackdropTypes.Acrylic,
-        Aero or Crystal => NativeMicaBackdrop.AeroGlassMaterial,
+        Acrylic or TracingPaper or Crystal => MicaBackdropTypes.Acrylic,
+        Aero => NativeMicaBackdrop.AeroGlassMaterial,
         ClearAcrylic => MicaBackdropTypes.ClearAcrylic,
         _ => MicaBackdropTypes.Mica
     };

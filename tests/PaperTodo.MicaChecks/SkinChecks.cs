@@ -26,7 +26,7 @@ internal static class SkinChecks
         foreach (var id in new[] { PaperSkins.TracingPaper })
             Program.Assert(PaperSkins.UsesNativeBackdrop(id) && PaperSkins.NativeBackdrop(id) == MicaBackdropTypes.Acrylic, "supported Acrylic recipe");
         Program.Assert(PaperSkins.NativeBackdrop(PaperSkins.Aero) == NativeMicaBackdrop.AeroGlassMaterial, "Aero selects its clear native glass recipe");
-        Program.Assert(PaperSkins.NativeBackdrop(PaperSkins.Crystal) == NativeMicaBackdrop.AeroGlassMaterial, "Crystal selects its clear native glass recipe");
+        Program.Assert(PaperSkins.NativeBackdrop(PaperSkins.Crystal) == MicaBackdropTypes.Acrylic, "Crystal selects its Acrylic backdrop recipe");
         CheckPersistence();
         var resources = new ResourceManager("PaperTodo.Resources.Strings", typeof(Strings).Assembly);
         foreach (var culture in new[] { "", "en", "ja", "ko" })

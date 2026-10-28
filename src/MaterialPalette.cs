@@ -28,7 +28,7 @@ internal readonly record struct MaterialPalette(Color Surface, Color NativeOverl
             PaperSkins.Aero => (.72, dark ? 64 : 36, 0, 0d),
             // 15% less cover than the previous 226/211 tracing veil.
             PaperSkins.TracingPaper => (.04, dark ? 192 : 179, 0, 18d),
-            PaperSkins.Crystal => (.15, dark ? 88 : 68, dark ? 24 : 18, 16d),
+            PaperSkins.Crystal => (.06, dark ? 198 : 188, dark ? 20 : 16, 28d),
             _ => (0d, 255, 0, 0d)
         };
         var transparencyScale = MaterialTransparencyLevels.CoverScale(transparency);
