@@ -14,7 +14,7 @@ internal static class SkinChecks
     private static readonly string[] Decorated = PaperSkins.All.Where(PaperSkins.IsDecorated).ToArray();
     internal static void Run(AppController controller)
     {
-        Program.Assert(PaperSkins.All.Distinct().Count() == 7 && Decorated.Length == 3, "unique skin choices");
+        Program.Assert(PaperSkins.All.Distinct().Count() == 8 && Decorated.Length == 4, "unique skin choices");
         Program.Assert(!new AppState().HideSurfaceOutline, "ordinary outer border is visible by default");
         Program.Assert(PaperSkins.Resolve(null, "mica", "clearAcrylic") == PaperSkins.ClearAcrylic, "legacy clear Acrylic");
         Program.Assert(PaperSkins.Resolve(null, "mica", "micaAlt") == PaperSkins.Mica, "retired material migration");
@@ -26,6 +26,7 @@ internal static class SkinChecks
         foreach (var id in new[] { PaperSkins.TracingPaper })
             Program.Assert(PaperSkins.UsesNativeBackdrop(id) && PaperSkins.NativeBackdrop(id) == MicaBackdropTypes.Acrylic, "supported Acrylic recipe");
         Program.Assert(PaperSkins.NativeBackdrop(PaperSkins.Aero) == NativeMicaBackdrop.AeroGlassMaterial, "Aero selects its clear native glass recipe");
+        Program.Assert(PaperSkins.NativeBackdrop(PaperSkins.Crystal) == NativeMicaBackdrop.AeroGlassMaterial, "Crystal selects its clear native glass recipe");
         CheckPersistence();
         var resources = new ResourceManager("PaperTodo.Resources.Strings", typeof(Strings).Assembly);
         foreach (var culture in new[] { "", "en", "ja", "ko" })

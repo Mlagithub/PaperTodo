@@ -101,7 +101,7 @@ internal sealed class MaterialMenuOpening
     // the popup animation; Aero still opens immediately and never waits for capture.
     internal static bool SuppressPopupAnimation => NeedsBackground ||
         AppController.Current?.State.MatchAuxiliaryMaterialStrength == true &&
-        Theme.Skin == PaperSkins.Aero && !SystemParameters.HighContrast && DwmMicaApi.Instance.EffectsEnabled;
+        Theme.Skin is PaperSkins.Aero or PaperSkins.Crystal && !SystemParameters.HighContrast && DwmMicaApi.Instance.EffectsEnabled;
 
     internal MaterialMenuOpening(FrameworkElement owner, DependencyProperty isOpen, Func<FrameworkElement?> content,
         Func<UIElement?> target, Func<PlacementMode> placement,

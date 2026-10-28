@@ -28,6 +28,7 @@ internal readonly record struct MaterialPalette(Color Surface, Color NativeOverl
             PaperSkins.Aero => (.72, dark ? 64 : 36, 0, 0d),
             // 15% less cover than the previous 226/211 tracing veil.
             PaperSkins.TracingPaper => (.04, dark ? 192 : 179, 0, 18d),
+            PaperSkins.Crystal => (.15, dark ? 88 : 68, dark ? 24 : 18, 16d),
             _ => (0d, 255, 0, 0d)
         };
         var transparencyScale = MaterialTransparencyLevels.CoverScale(transparency);
@@ -43,8 +44,8 @@ internal readonly record struct MaterialPalette(Color Surface, Color NativeOverl
         };
         wash = MaterialTransparencyLevels.ScaleCover((byte)wash, transparency);
         var surface = skin is PaperSkins.Paper or PaperSkins.Pixel ? paper :
-            Mix(baseColor, hue, neutral && skin != PaperSkins.Aero ? 0 : chroma * (dark ? .62 : 1));
-        // Preserve the neutral system skin exactly; Aero's neutral remains cool clear glass.
+            Mix(baseColor, hue, neutral && skin != PaperSkins.Aero && skin != PaperSkins.Crystal ? 0 : chroma * (dark ? .62 : 1));
+        // Preserve the neutral system skin exactly; Aero and Crystal neutral remain cool clear glass.
         if (neutral && PaperSkins.IsSystemMaterial(skin)) surface = paper;
         var overlay = Color.FromArgb((byte)(neutral ? 0 : wash), hue.R, hue.G, hue.B);
         // Preview color/alpha is stable across geometry and full/quiet modes. It does

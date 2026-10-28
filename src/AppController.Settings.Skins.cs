@@ -54,7 +54,8 @@ public sealed partial class AppController
         panel.Children.Add(WrapWithHint(SettingsFieldLabel(Strings.Get("SettingsPaperSkin")), skin switch
         {
             PaperSkins.TracingPaper => "TipSkinTracingPaper",
-            PaperSkins.Aero => "TipSkinAero", PaperSkins.Pixel => "TipSkinPixel", _ => "TipPaperSkin"
+            PaperSkins.Aero => "TipSkinAero", PaperSkins.Pixel => "TipSkinPixel",
+            PaperSkins.Crystal => "TipSkinCrystal", _ => "TipPaperSkin"
         }));
         panel.Children.Add(CreateSettingsSelect(
             PaperSkins.All.Select(id => (id, Strings.Get(PaperSkins.LabelKey(id)))).ToArray(), skin, SetPaperSkin));

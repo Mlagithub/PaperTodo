@@ -372,6 +372,15 @@ internal sealed class DesktopBackgroundCapture : IDisposable
                 ? BitBlt(_dc, 0, 0, _width, _height, _screen, source.X, source.Y, CaptureRasterOperation)
                 : StretchBlt(_dc, 0, 0, _width, _height, _screen,
                     source.X, source.Y, source.Width, source.Height, CaptureRasterOperation);
+            if (!ok)
+            {
+                ReleaseDC(IntPtr.Zero, _screen);
+                _screen = GetDC(IntPtr.Zero);
+                ok = source.Width == _width && source.Height == _height
+                    ? BitBlt(_dc, 0, 0, _width, _height, _screen, source.X, source.Y, CaptureRasterOperation)
+                    : StretchBlt(_dc, 0, 0, _width, _height, _screen,
+                        source.X, source.Y, source.Width, source.Height, CaptureRasterOperation);
+            }
             if (!ok) throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 

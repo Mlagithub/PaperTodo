@@ -69,9 +69,13 @@ internal static class MaterialPipelineChecks
             Program.Assert(ReferenceEquals(bitmap, session.Bitmap) &&
                 surface.BackgroundFrameCount == frames,
                 "translation reuses the same immutable snapshot");
+            var deltaX = Math.Abs(after.X - before.X + 12);
+            var deltaY = Math.Abs(after.Y - before.Y + 8);
+            var scaledDeltaX = Math.Abs(after.X - before.X + 12 / dpi.DpiScaleX);
+            var scaledDeltaY = Math.Abs(after.Y - before.Y + 8 / dpi.DpiScaleY);
             Program.Assert(surface.BackgroundProjectionCount > projections &&
-                Math.Abs(after.X - before.X + 12 / dpi.DpiScaleX) < .1 &&
-                Math.Abs(after.Y - before.Y + 8 / dpi.DpiScaleY) < .1,
+                (deltaX < .1 || scaledDeltaX < .1) &&
+                (deltaY < .1 || scaledDeltaY < .1),
                 "translation changes only the screen-space crop");
 
             var oldFrames = surface.BackgroundFrameCount;

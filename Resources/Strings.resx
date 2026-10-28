@@ -1513,6 +1513,9 @@
   <data name="SkinPixel" xml:space="preserve">
     <value>像素风</value>
   </data>
+  <data name="SkinCrystal" xml:space="preserve">
+    <value>晶透玻璃</value>
+  </data>
   <data name="TipSkinTracingPaper" xml:space="preserve">
     <value>乳白底色和轻微纤维纹理，背景颜色隐约透入；正文保持清晰。</value>
   </data>
@@ -1521,6 +1524,9 @@
   </data>
   <data name="TipSkinPixel" xml:space="preserve">
     <value>复古任务面板：紧凑阶梯角、单层外框、像素对齐图标和方形按钮。中文正文仍使用普通字体。</value>
+  </data>
+  <data name="TipSkinCrystal" xml:space="preserve">
+    <value>通透纯净的水晶质感与 135° 物理边缘切面高光，保留清晰底衬。</value>
   </data>
   <data name="SkinRestartRequired" xml:space="preserve">
     <value>重启 PaperTodo 后启用原生背景。</value>
