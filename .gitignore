@@ -1,11 +1,21 @@
+# Build and publish outputs
 bin/
 !native/lmdb/bin/
 !native/lmdb/bin/win-x64/
 !native/lmdb/bin/win-x64/papertodo_lmdb.dll
 obj/
 输出/
+dist/
+release/
+PaperTodo_v*/
+
+# IDE and developer workspace
 .vs/
 *.user
+.zcode/
+tasks/
+
+# Local user runtime data
 data.json
 data.json.tmp
 data.backup.json
@@ -16,17 +26,14 @@ telemetry.json
 telemetry.json.tmp
 telemetry-crash.json
 telemetry-crash.json.tmp
+plugins/**/.runtime/
+plugins/data/
+
+# Local debug and comparison tools
 对比_StickyMD/
 .codex_decompile_debug/
 extract_code.py
 rollout-*.jsonl
-plugins/**/.runtime/
-plugins/data/
 
 # Local drafts
 *.draft.md
-
-.zcode/
-tasks/
-
-
