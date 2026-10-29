@@ -4105,13 +4105,6 @@ public sealed partial class AppController : IDisposable
             window.CommitPendingEditsForSave();
         }
 
-        _lifecycleState = AppLifecycleState.Exiting;
-        _saveTimer.Stop();
-        _forceSaveTimer.Stop();
-        StopFullscreenAvoidanceRuntime(restoreTopmost: false);
-        _displayMetricsRefreshTimer.Stop();
-        StopTodoReminderTimer();
-
         if (!TrySaveNow(sync: true))
         {
             TryExitCleanup(() =>
@@ -4123,6 +4116,16 @@ public sealed partial class AppController : IDisposable
                     MessageBoxImage.Error);
             });
         }
+
+        // Allow plugins (like MinIO Sync) to safely perform final sync while workspace is still running
+        TryExitCleanup(DisposePaperPluginHostRuntime);
+
+        _lifecycleState = AppLifecycleState.Exiting;
+        _saveTimer.Stop();
+        _forceSaveTimer.Stop();
+        StopFullscreenAvoidanceRuntime(restoreTopmost: false);
+        _displayMetricsRefreshTimer.Stop();
+        StopTodoReminderTimer();
 
         DisposeRuntimeResources();
         _lifecycleState = AppLifecycleState.Disposed;
